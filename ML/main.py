@@ -118,3 +118,8 @@ class KNN:
                 return np.mean(k_labels)
         else:
             raise ValueError("Task must be 'classification' or 'regression'")
+
+
+class LineaRegression:
+    def __init__(self, learning_rate=0.01, n_iterations=1000):
+        pass
