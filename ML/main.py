@@ -435,14 +435,16 @@ class RandomForestClassifier:
         self.bootstrap = bootstrap
         self.random_state = random_state
 
-        self.trees = []S
+        self.trees = []
         self.feature_indices = [] 
 
         if random_state is not None:
             np.random.seed(random_state)
-    
+
     def _get_max_features(self, n_features):
+        # This function decides how many of them should be used when looking for the best split at a tree node.
         if isinstance(self.max_features, int):
+            # If the user explicitly says max_features=5, it just returns 5
             return self.max_features
         elif isinstance(self.max_features, float):
             return max(1, int(self.max_features * n_features))
@@ -456,4 +458,126 @@ class RandomForestClassifier:
 
 
     def fit(self,X,y):
-        X=np.array(x)
+        X=np.array(X)
+        y=np.array(y)
+        n_samples,n_features = X.shape
+
+        max_feats=self._get_max_features(n_features)
+
+        self.trees=[]
+        self.feature_indices=[]
+
+        for _ in range(self.n_estimators):
+            """
+            if self.bootstrap:
+            self.bootstrap is a boolean flag.
+
+            If True, the tree will be trained on a bootstrap sample of the dataset.
+
+            If False, it will just use the full dataset without resampling.
+
+                        """
+        
+
+            """
+            Bootstrapping increases randomness in each tree → reduces overfitting when combining multiple trees.
+
+            In Random Forests, each tree sees a slightly different version of the dataset, making the ensemble more robust."""
+            if self.bootstrap:
+
+                """
+                n_samples = total number of rows in the training data.
+
+                np.random.choice(..., replace=True) → randomly selects rows with replacement.
+
+                This means the same row can appear multiple times in the sample, and some rows from the original dataset might not appear at all.
+
+                This creates a dataset of the same size but slightly different distribution."""
+                indices=np.random.choice(n_samples,size=n_samples,replace=True)
+                X_sample=X[indices]
+                y_sample=y[indices]
+            else:
+                X_sample=X
+                y_sample=y
+
+            # This part is doing random column (feature) selection for each tree in your Random Forest.
+            """
+            n_features-> total number of column sin X
+            max_feats-> number of faetures rto condsider for this tree
+            The result (feat_indices) is an array of column indices.
+
+
+            """
+            feature_indices=np.random.choice(n_features,size=max_feats,replace=False)
+
+            self.feature_indices.append(feature_indices)
+
+            tree=DecisionTreeClassifier(max_depth=self.max_depth, min_samples_split=self.min_samples_split)
+            tree.fit(X_sample[:,feature_indices],y_sample)
+            self.trees.append(tree)
+    
+
+    def predict(self,X):
+        X=np.array(X)
+
+
+        """
+        Creates an empty 2D array to store predictions from each tree.
+
+        Shape:
+
+        Rows = number of samples in X
+
+        Columns = number of trees (self.n_estimators)
+
+
+        """
+        tree_preds=np.zeros((X.shape[0],self.n_estimators),dtype=object)
+
+
+        """
+        feat_idx → retrieves the column indices that this tree was trained on.
+
+        X[:, feat_idx] → selects only those columns for prediction.
+
+        tree.predict(...) → gets predictions from that tree.
+
+        Saves them in tree_preds.
+        """
+        for i,tree in enumerate(self.trees):
+            feat_idx=self.feature_indices[i]
+            preds=tree.predict(X[:,feat_idx])
+            tree_preds[:,i]=preds
+        
+        y_pred=[]
+
+
+
+
+        """
+        For each row (sample) in tree_preds:
+
+        Count how many trees predicted each label.
+
+        Take the label with the highest count → majority vote.
+
+        y_pred ends up as the final prediction for all samples."""
+        for pred in tree_preds:
+            counts=Counter(pred)
+            y_pred.append(counts.most_common(1)[0][0])
+        
+        return y_pred
+    
+    def score(self, X, y):
+        y_pred=self.predict(X)
+        return np.mean(y_pred == np.array(y))
+
+
+
+
+
+
+class svc:
+    def __init__(self,C=1.0,kernel='linear'):
+        self.C=C
+        self.kernel=kernel
