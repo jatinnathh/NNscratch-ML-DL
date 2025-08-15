@@ -581,3 +581,4 @@ class svc:
     def __init__(self,C=1.0,kernel='linear'):
         self.C=C
         self.kernel=kernel
+        pass
