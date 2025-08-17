@@ -15,3 +15,10 @@ def cosine_similarity(x1, x2):
     if norm_x1 == 0 or norm_x2 == 0:
         return 0
     return dot_product / (norm_x1 * norm_x2)
+
+def jaccard_similarity(x1, x2):
+    intersection = np.sum(np.minimum(x1, x2))
+    union = np.sum(np.maximum(x1, x2))
+    if union == 0:
+        return 0
+    return intersection / union
