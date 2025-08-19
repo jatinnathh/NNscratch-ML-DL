@@ -27,3 +27,7 @@ def minkowski_distance(x1, x2, p=3):
     if p <= 0:
         raise ValueError("p must be greater than 0")
     return np.sum(np.abs(x1 - x2) ** p) ** (1 / p)
+
+
+def chebyshev_distance(x1, x2):
+    return np.max(np.abs(x1 - x2))
