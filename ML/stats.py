@@ -22,3 +22,8 @@ def jaccard_similarity(x1, x2):
     if union == 0:
         return 0
     return intersection / union
+
+def minkowski_distance(x1, x2, p=3):
+    if p <= 0:
+        raise ValueError("p must be greater than 0")
+    return np.sum(np.abs(x1 - x2) ** p) ** (1 / p)
