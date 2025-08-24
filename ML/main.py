@@ -575,9 +575,98 @@ class RandomForestClassifier:
 
 
 
+class LinearSVM:
+    """
+    Linear Support Vector Machine (SVM) Classifier from scratch.
+    - Uses Hinge Loss + L2 Regularization
+    - Trained with Gradient Descent (subgradient method)
+    Works like sklearn's LinearSVC (for binary classification).
+    """
 
+    def __init__(self, learning_rate=0.001, lambda_param=0.01, n_iters=1000):
+        """
+        Parameters:
+        - learning_rate : float, step size for gradient descent
+        - lambda_param  : float, regularization strength (controls margin width)
+        - n_iters       : int, number of training iterations
+        """
+        self.lr = learning_rate
+        self.lambda_param = lambda_param
+        self.n_iters = n_iters
+        self.w = None   # weight vector
+        self.b = None   # bias term
 
-class svc:
-    def __init__(self,C=1.0,kernel='linear'):
-        self.C=C
-        
+    def fit(self, X, y):
+        """
+        Train the SVM using gradient descent on hinge loss.
+        X : (n_samples, n_features) feature matrix
+        y : (n_samples,) labels, must be in {-1, 1}
+        """
+        n_samples, n_features = X.shape
+
+        # Initialize weights and bias
+        self.w = np.zeros(n_features)
+        self.b = 0
+
+        # Convert labels to {-1, 1} if needed (SVM requires this form)
+        y_ = np.where(y <= 0, -1, 1)
+
+        # Gradient Descent Loop
+        for _ in range(self.n_iters):
+            for idx, x_i in enumerate(X):
+                # Condition: y_i * (w·x + b) >= 1  (correct classification with margin)
+                condition = y_[idx] * (np.dot(x_i, self.w) + self.b)
+                  # Hinge Loss condition:
+                # If yi(w·xi + b) >= 1 -> correctly classified outside margin -> no loss
+                # If yi(w·xi + b) < 1 -> inside margin or misclassified -> update needed
+                if condition >= 1:
+                    # Correct classification, inside margin → only apply regularization
+                    dw = 2 * self.lambda_param * self.w
+                    db = 0
+                else:
+                    # Misclassified or within margin
+                    dw = 2 * self.lambda_param * self.w - y_[idx] * x_i
+                    db = -y_[idx]
+
+                # Update weights & bias
+                self.w -= self.lr * dw
+                self.b -= self.lr * db
+
+    def predict(self, X):
+        """
+        Predict class labels {-1, 1} for input samples.
+        """
+        approx = np.dot(X, self.w) + self.b
+        return np.sign(approx)
+
+    def score(self, X, y):
+        """
+        Return accuracy of the model.
+        """
+        preds = self.predict(X)
+        y_true = np.where(y <= 0, -1, 1)
+        return np.mean(preds == y_true)
+
+# about hinge loss
+# Hinge loss is used for "maximum-margin" classification, most notably for support vector machines.
+# The goal of SVM is to maximize the margin between classes 
+# while penalizing misclassifications.
+#
+# For one training sample (xi, yi):
+#   L_i = max(0, 1 - yi(w·xi + b))
+#
+# Cases:
+# 1) yi(w·xi + b) >= 1:
+#       → Correctly classified and outside margin → loss = 0
+#
+# 2) 0 < yi(w·xi + b) < 1:
+#       → Correctly classified but inside margin → small loss > 0
+#
+# 3) yi(w·xi + b) < 0:
+#       → Misclassified → large loss
+#
+# Total Loss with Regularization:
+#   L = (1/n) * Σ max(0, 1 - yi(w·xi + b)) + λ||w||²
+#
+# First term → encourages classification with margin
+# Second term → prevents weights from growing too large (regularization)
