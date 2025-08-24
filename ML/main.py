@@ -670,3 +670,24 @@ class LinearSVM:
 #
 # First term → encourages classification with margin
 # Second term → prevents weights from growing too large (regularization)
+
+
+
+
+
+class SVC:
+    def __init__(self,C=1,lr=0.001,kernel="rbf",gamma=0.5,tol=1e-3,max_passess=3):
+        self.C = C
+        self.lr = lr
+        self.kernel = kernel
+        self.gamma = gamma
+        self.tol = tol
+        self.max_passess = max_passess
+
+    def _kernel(self,x1,x2):
+        if self.kernel == "linear":
+            return np.dot(x1, x2)
+        elif self.kernel == "rbf":
+            return np.exp(-self.gamma * np.linalg.norm(x1 - x2) ** 2)
+        else:
+            raise ValueError("Unknown kernel")
