@@ -677,17 +677,40 @@ class LinearSVM:
 
 class SVC:
     def __init__(self,C=1,lr=0.001,kernel="rbf",gamma=0.5,tol=1e-3,max_passess=3):
-        self.C = C
-        self.lr = lr
-        self.kernel = kernel
-        self.gamma = gamma
-        self.tol = tol
-        self.max_passess = max_passess
+        self.C = C                   # Regularization strength (upper bound for alphas)
+        self.lr = lr                 # Learning rate
+        self.kernel = kernel         # "linear" or "rbf"
+        self.gamma = gamma           # RBF kernel parameter
+        self.tol = tol               # Numerical tolerance for KKT checks
+        self.max_passess = max_passess  # Maximum number of passes over the training data
 
     def _kernel(self,x1,x2):
+        # Define kernel function   
         if self.kernel == "linear":
             return np.dot(x1, x2)
         elif self.kernel == "rbf":
             return np.exp(-self.gamma * np.linalg.norm(x1 - x2) ** 2)
         else:
             raise ValueError("Unknown kernel")
+
+
+    def fit(self,X,y):
+        # Convert labels to {-1, +1}
+        self.X=X
+        self.y=np.where(y==0,-1,1)
+        n_samples,n_features=X.shape
+
+        # Initialize dual variables (alphas) and bias
+        self.alpha=np.zeros(n_samples)
+        self.b=0
+        passes=0
+
+
+        # Precompute Gram (kernel) matrix K[i,j] = k(x_i, x_j)
+        k=np.zeros((n_samples,n_samples))
+        for i in range(n_samples):
+            for j in range(n_samples):
+                k[i,j]=self._kernel(X[i],X[j])
+
+        while passes < self.max_passess:
+            pass
