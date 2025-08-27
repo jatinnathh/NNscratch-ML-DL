@@ -748,56 +748,89 @@ class SVC:
                         H = min(self.C, self.alpha[i] + self.alpha[j])
 
                     # After this, alpha[j] must stay within [L, H].
-                    # If L == H, no update is possible for alpha[j].
-                    
-                    if L==H:
+                   
+
+
+                    # Compute the bounds for alpha[j] (L and H) ===
+                    # If L == H, there is no room to update alpha[j], so skip this pair
+                    if L == H:
                         continue
 
-                    eta=2*k[i,j]-k[i,i]-k[j,j]
-                    if eta >=0:
+                    # eta = 2*K(i,j) - K(i,i) - K(j,j)
+                    # It tells us how much alpha[j] will change if we move it.
+                    # If eta >= 0, the objective function is non-convex in this direction,
+                    # so we cannot make progress → skip.
+                    eta = 2 * k[i, j] - k[i, i] - k[j, j]
+                    if eta >= 0:
                         continue
 
-                    self.alpha[j]-=self.y[j]*(Ei - Ej)/eta
-                    self.alpha=np.clip(self.alpha[j],L,H)
-                    if abs(self.alpha[j]-alpha_j_old)<1e-5:
+                    # Formula: alpha_j_new = alpha_j_old - y_j * (E_i - E_j) / eta
+                    # where E_i and E_j are the prediction errors at points i and j.
+                    self.alpha[j] -= self.y[j] * (Ei - Ej) / eta
+
+                    # Clip alpha[j] so that it stays within the box [L, H].
+                    # Without clipping, alpha[j] might go outside feasible range.
+                    self.alpha[j] = np.clip(self.alpha[j], L, H)
+
+                    # If alpha[j] changed by only a tiny amount (< 1e-5), then it is effectively unchanged → skip.
+                    if abs(self.alpha[j] - alpha_j_old) < 1e-5:
                         continue
 
+                    # #Update alpha[i] accordingly ===
+                    # Because the sum over y_i * alpha_i must remain constant,
+                    # alpha[i] is adjusted in the opposite direction.
+                    self.alpha[i] += self.y[i] * self.y[j] * (alpha_j_old - self.alpha[j])
 
-                    self.alpha[i]+=self.y[i]*self.y[j]*(alpha_j_old - self.alpha[j])
+                    # Update the bias term b ===
+                    # Two possible estimates of b: b1 (using i) and b2 (using j).
+                    # Either can be valid, but in practice:
+                    #   - if alpha[i] is strictly between 0 and C, we use b1
+                    #   - else if alpha[j] is strictly between 0 and C, we use b2
+                    #   - otherwise, take the average (b1 + b2)/2
+                    b1 = (
+                        self.b - Ei
+                        - self.y[i] * (self.alpha[i] - alpha_i_old) * k[i, i]
+                        - self.y[j] * (self.alpha[j] - alpha_j_old) * k[i, j]
+                    )
 
+                    b2 = (
+                        self.b - Ej
+                        - self.y[i] * (self.alpha[i] - alpha_i_old) * k[i, j]
+                        - self.y[j] * (self.alpha[j] - alpha_j_old) * k[j, j]
+                    )
 
-                    b1=self.b-Ei -  self.y[i]*(self.alpha[i]-alpha_i_old)*k[i,i] - self.y[j]*(self.alpha[j]-alpha_j_old)*k[i,j]
-                    b2=self.b-Ej -  self.y[i]*(self.alpha[i]-alpha_i_old)*k[i,j] - self.y[j]*(self.alpha[j]-alpha_j_old)*k[j,j]
-                    
-
-                    if 0<self.alpha[i]<self.C:
-                        self.b=b1
-                    elif 0<self.alpha[j]<self.C:
-                        self.b=b2
+                    if 0 < self.alpha[i] < self.C:
+                        self.b = b1
+                    elif 0 < self.alpha[j] < self.C:
+                        self.b = b2
                     else:
-                        self.b=(b1+b2)/2
-                    num_changed_alpha+=1
+                        self.b = (b1 + b2) / 2
+
+                    # Keep track of how many alphas changed in this pass
+                    num_changed_alpha += 1
+
+                    
+                    # If no alphas were updated, increase the pass counter.
+                    # Otherwise, reset it to 0.
+                    if num_changed_alpha == 0:
+                        passes += 1
+                    else:
+                        passes = 0
 
 
-                if num_changed_alpha==0:
-                    passes+=1
-                else:
-                    passes=0
-    def _decision_function(self,X):
-        res=0
-
+    def _decision_function(self, X):
+        # Computes f(x) = Σ α_i y_i K(x, x_i)
+        res = 0
         for i in range(len(self.alpha)):
-            if self.alpha>0:
-                res+=self.alpha[i]*self.y[i]*self._kernel(X,self.X[i])
-        
+            if self.alpha[i] > 0:  # only use support vectors
+                res += self.alpha[i] * self.y[i] * self._kernel(X, self.X[i])
         return res
 
 
-    def predict(self,X):
-        preds=[]
-
+    # === Prediction function ===
+    def predict(self, X):
+        preds = []
         for x in X:
-            pred=np.sign(self._decision_function(x))
-            preds.append(1 if pred==1 else 0)
+            pred = np.sign(self._decision_function(x))  # sign(f(x)) gives class
+            preds.append(1 if pred == 1 else 0) 
         return np.array(preds)
-    

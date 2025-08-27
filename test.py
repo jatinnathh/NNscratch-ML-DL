@@ -11,6 +11,3 @@ tree.fit(X, y)
 print("Predictions:", tree.predict([[2.0], [3.5]]))
 print("Accuracy:", tree.score(X, y))
 
-# See the tree structure
-import pprint
-pprint.pprint(tree.tree)
