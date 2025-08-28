@@ -757,7 +757,47 @@ class SVC:
                     if eta >=0:
                         continue
 
-                    self.alpha
+                    self.alpha[j]-=self.y[j]*(Ei - Ej)/eta
+                    self.alpha=np.clip(self.alpha[j],L,H)
+                    if abs(self.alpha[j]-alpha_j_old)<1e-5:
+                        continue
 
 
+                    self.alpha[i]+=self.y[i]*self.y[j]*(alpha_j_old - self.alpha[j])
+
+
+                    b1=self.b-Ei -  self.y[i]*(self.alpha[i]-alpha_i_old)*k[i,i] - self.y[j]*(self.alpha[j]-alpha_j_old)*k[i,j]
+                    b2=self.b-Ej -  self.y[i]*(self.alpha[i]-alpha_i_old)*k[i,j] - self.y[j]*(self.alpha[j]-alpha_j_old)*k[j,j]
                     
+
+                    if 0<self.alpha[i]<self.C:
+                        self.b=b1
+                    elif 0<self.alpha[j]<self.C:
+                        self.b=b2
+                    else:
+                        self.b=(b1+b2)/2
+                    num_changed_alpha+=1
+
+
+                if num_changed_alpha==0:
+                    passes+=1
+                else:
+                    passes=0
+    def _decision_function(self,X):
+        res=0
+
+        for i in range(len(self.alpha)):
+            if self.alpha>0:
+                res+=self.alpha[i]*self.y[i]*self._kernel(X,self.X[i])
+        
+        return res
+
+
+    def predict(self,X):
+        preds=[]
+
+        for x in X:
+            pred=np.sign(self._decision_function(x))
+            preds.append(1 if pred==1 else 0)
+        return np.array(preds)
+    
