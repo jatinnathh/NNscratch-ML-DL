@@ -713,4 +713,51 @@ class SVC:
                 k[i,j]=self._kernel(X[i],X[j])
 
         while passes < self.max_passess:
-            pass
+            num_changed_alpha=0
+            for i in range(n_samples):
+
+                #  compute error for sample i
+                Ei=self._decision_function(X[i]) - self.y[i]
+                
+                #  check KKT conditions
+                if (self.y[i]*Ei<-self.tol and self.alpha[i]<self.C )or self.y[i]*Ei>self.tol and self.alpha[i]>0:
+                    # update 2 alphas at a time to maintain equality 
+                    j=np.random.randint(0,n_samples-1)
+                    if j==i:
+                        j=(j+1)%n_samples
+                    Ej=self._decision_function(X[j]) - self.y[j]
+                    alpha_i_old,alpha_j_old=self.alpha[i],self.alpha[j]
+
+                    
+                    # When updating alpha[i] and alpha[j], 
+                    # we need to keep the constraint:  0 <= alpha <= C 
+                    # and also:   sum(y[i] * alpha[i]) = 0
+                    # So we compute bounds L and H between which alpha[j] must lie.
+
+                    if self.y[i] != self.y[j]:
+                        # Case 1: labels are different
+                        # Lower bound (L): alpha[j] - alpha[i] but not below 0
+                        L = max(0, self.alpha[j] - self.alpha[i])
+                        # Upper bound (H): C + alpha[j] - alpha[i], but not above C
+                        H = min(self.C, self.C + self.alpha[j] - self.alpha[i])
+                    else:
+                        # Case 2: labels are same
+                        # Lower bound (L): alpha[i] + alpha[j] - C, but not below 0
+                        L = max(0, self.alpha[i] + self.alpha[j] - self.C)
+                        # Upper bound (H): alpha[i] + alpha[j], but not above C
+                        H = min(self.C, self.alpha[i] + self.alpha[j])
+
+                    # After this, alpha[j] must stay within [L, H].
+                    # If L == H, no update is possible for alpha[j].
+                    
+                    if L==H:
+                        continue
+
+                    eta=2*k[i,j]-k[i,i]-k[j,j]
+                    if eta >=0:
+                        continue
+
+                    self.alpha
+
+
+                    
